@@ -171,9 +171,6 @@ class PdfObject {
         return this.content;
     }
 }
-
-
-
 class BooleanPO extends PdfObject{
     constructor(value) {
         super(value);
@@ -223,6 +220,9 @@ class ArrayPO extends PdfObject {
     add(arg) {
         this.content.push(arg);
     }
+    getLength() {
+        return this.content.length;
+    }
 }
 class DictionaryPO extends PdfObject{
     constructor() {
@@ -240,8 +240,9 @@ class DictionaryPO extends PdfObject{
         str += ">>";
         return str;
     }
-}/*
-class StreamPdfObject {
+}
+/*
+class StreamPO {
     constructor() {}
 }*/
 class IndirectReference extends PdfObject{
@@ -268,24 +269,6 @@ class IndirectReference extends PdfObject{
         this.content.push(arg);
     }
 }
-
-class IndirectReferences {
-    constructor() {
-        this.arr = new Array();
-        this.arr.push(new IndirectReference0());
-    }
-    add() {
-        const newIR = new IndirectReference(this.arr.length);
-        this.arr.push(newIR);
-        return newIR;
-    }
-    call(num) {
-        if (num <= this.arr.length)
-            return this.arr[num];
-        else
-            return undefined;
-    }
-}
 class IndirectReference0 extends IndirectReference {
     constructor() {
         super();
@@ -304,8 +287,24 @@ class IndirectReference0 extends IndirectReference {
     add(arg) {
     }
 }
-
-class StringStreamPdfObject {
+class IndirectReferences {
+    constructor() {
+        this.arr = new Array();
+        this.arr.push(new IndirectReference0());
+    }
+    add() {
+        const newIR = new IndirectReference(this.arr.length);
+        this.arr.push(newIR);
+        return newIR;
+    }
+    call(num) {
+        if (num <= this.arr.length)
+            return this.arr[num];
+        else
+            return undefined;
+    }
+}
+class StringStreamPO {
     constructor() {
         this.content = "";
         this.lenDic = new DictionaryPO();
@@ -319,8 +318,7 @@ class StringStreamPdfObject {
         return `${this.lenDic.toString()}stream\n${this.content}\nendstream\n`;
     }
 }
-
-class PDFGenerator {
+class PdfGenerator {
     constructor() {
         this.IRs = new IndirectReferences();
         
@@ -354,92 +352,109 @@ class PDFGenerator {
     }
 }
 
-const pg = new PDFGenerator();
-const ir1 = pg.IRs.add();
-const ir2 = pg.IRs.add();
-const ir3 = pg.IRs.add();
-const ir4 = pg.IRs.add();
-const ir5 = pg.IRs.add();
+class TextStreamPO extends StringStreamPO {
+    constructor(arr_string, fontName, fontSize, startX, startY,textLeading) {
+    //arr_string ...  string の配列
+        super();
+        super.add("BT");
+        super.add(`${new NamePO(fontName)} ${fontSize} Tf`);
+        if (startX != undefined && startY != undefined)
+            super.add(`${startX} ${startY} Td`);
+        if (textLeading != undefined)
+            super.add(`${textLeading} TL`);
+        arr_string.forEach((string, idx) => {
+            let str = `${new StringPO(string).toString()} Tj`;
+            if (idx + 1 != arr_string.length)
+                str += " T*";//改行記号
+            super.add(str);
+        });
+    }
+/*    addLine(line) {
+        super.add(line);
+    }*/
+    toString() {
+        super.add("ET");
+        return super.toString();
+    }
+}
+class FontDictionaryPO extends DictionaryPO {
+    constructor(fontName,baseFont,subtype,encoding) {
+        super();
 
-const dict1 = new DictionaryPO();
-dict1.add(new NamePO("Pages"),ir2);
-dict1.add(new NamePO("Type"),new NamePO("Catalog"));
-ir1.add(dict1);
+        const dict = new DictionaryPO();
+        dict.add(new NamePO("Type"), new NamePO("Font"));
+        if(fontName!=undefined) dict.add(new NamePO("Subtype"),new NamePO(subtype));
+        if(baseFont!=undefined) dict.add(new NamePO("BaseFont"), new NamePO(baseFont));
+        if(encoding!=undefined) dict.add(new NamePO("Encoding"),new NamePO(encoding));
 
+        const dict2 = new DictionaryPO();
+        dict2.add(new NamePO(fontName),dict);
+        this.add(new NamePO("Font"), dict2)
 
-
-const dict2 = new DictionaryPO();
-dict2.add(new NamePO("Kids"), new ArrayPO(ir3));
-dict2.add(new NamePO("Count"), new NumberPO(1));
-dict2.add(new NamePO("Type"),new NamePO("Pages"));
-ir2.add(dict2);
-
-
-const dict4_3 = new DictionaryPO();
-dict4_3.add(new NamePO("BaseFont"),new NamePO("Times-Roman"));
-dict4_3.add(new NamePO("Subtype"),new NamePO("Type1"));
-dict4_3.add(new NamePO("Type"), new NamePO("Font"));
-const dict4_2 = new DictionaryPO();
-dict4_2.add(new NamePO("F0"),dict4_3);
-const dict4_1 = new DictionaryPO();
-dict4_1.add(new NamePO("Font"),dict4_2);
-ir4.add(dict4_1);
-
-const dict3 = new DictionaryPO();
-dict3.add(new NamePO("Parent"), ir2);
-dict3.add(new NamePO("MediaBox"), new ArrayPO(new NumberPO(0), new NumberPO(0), new NumberPO(595), new NumberPO(842)));
-dict3.add(new NamePO("Resources"), ir4);
-dict3.add(new NamePO("Contents"), ir5);
-dict3.add(new NamePO("Type"), new NamePO("Page"));
-ir3.add(dict3);
-
-const strm = new StringStreamPdfObject();
-strm.add("1. 0. 0. 1. 50. 720. cm");
-strm.add("BT");
-strm.add("/F0 36 Tf");
-strm.add("(Hello, world!) Tj");
-strm.add("ET");
-
-ir5.add(strm);
-
-pg.testWriter();
-
-/*
-const indiRef = new IndirectReference(3);
-const obj = new DictionaryPO();
-obj.add(new NamePO("Kids"), new ArrayPO(indiRef));
-obj.add(new NamePO("Count"), new NumberPO(1));
-obj.add(new NamePO("Type"),new NamePO("Pages"));
-console.log(obj.toString());*/
-/*
-const obj1 = new IndirectReference(1);
-obj1.add(new NamePO("Dog"));
-const obj2 = new IndirectReference(2);
-const dict = new DictionaryPO();
-dict.add(new NamePO("Name"), new StringPO("Pot i"));
-dict.add(new NamePO("Age"), new NumberPO(5));
-dict.add(new NamePO("Male"),new BooleanPO(true));
-obj2.add(dict);
-
-const arr = new ArrayPO(obj1, obj2);
-console.log(obj1.define());
-console.log(obj2.define());
-console.log(arr.toString());
-
-*/
-/*test
-const dict = new Dict({ "/Type": "Font" });
-console.log(dict.toString());
-const arr = new Arr();
-arr.push(1);
-arr.push(2);
-arr.push(3);
-console.log(arr.toString());
-*/
+        this.fontName = fontName;
+    }
+}
+class PageDictionaryPO extends DictionaryPO {
+    constructor(parentPO,resourcesPO,contensPO) {
+        super();
+        const a4 = new ArrayPO(new NumberPO(0), new NumberPO(0), new NumberPO(595), new NumberPO(842));
+        super.add(new NamePO("Parent"),parentPO);
+        super.add(new NamePO("MediaBox"),a4);
+        super.add(new NamePO("Resources"),resourcesPO);
+        super.add(new NamePO("Contents"), contensPO);
+        super.add(new NamePO("Type"), new NamePO("Page"));
+    }
+}
+class PageTreeDictionaryPO extends DictionaryPO {
+    constructor(arrPO_kids) {
+        super();
+        super.add(new NamePO("Kids"), arrPO_kids);
+        super.add(new NamePO("Count"), new NumberPO(arrPO_kids.getLength()))
+        super.add(new NamePO("Type"), new NamePO("Pages"));
+    }
+}
+class DocumentCalalogDictionaryPO extends DictionaryPO {
+    constructor(pageTreePO) {
+        super();
+        super.add(new NamePO("Pages"), pageTreePO);
+        super.add(new NamePO("Type"), new NamePO("Catalog"));
+    }
+}
+function writeSampleTest() {
+    const pg = new PdfGenerator();
+    const ir1 = pg.IRs.add();
+    const ir2 = pg.IRs.add();
+    const ir3 = pg.IRs.add();
+    const ir4 = pg.IRs.add();
+    const ir5 = pg.IRs.add();
 
 
-/*
-const sspo = new StringStreamPdfObject();
-sspo.add(`1. 0. 0. 1. 50. 700. cm\nBT\n/F0 32. Tf\n(Hello, world!) Tj\nET`);
-console.log(sspo.toString());
-*/
+    const docCatDicPO = new DocumentCalalogDictionaryPO(ir2);
+    //new DocumentCalalogDictionaryPO(pageTreePO);
+    ir1.add(docCatDicPO);
+
+    const pageTreeDicPO = new PageTreeDictionaryPO(new ArrayPO(ir3));
+    //new PageTreeDictionaryPO(arrPO_kids);
+    ir2.add(pageTreeDicPO);
+
+    const fontName = "F0";
+    const fontDicPO = new  FontDictionaryPO(fontName, "Times-Roman", "Type1");
+    //new FontDictionaryPO(fontName,baseFont,subtype,encoding);
+    ir4.add(fontDicPO);
+
+    const pageDicPO = new PageDictionaryPO(ir2, ir4, ir5);
+    //new PageDictionaryPO(parentPO,resourcesPO,contensPO);
+    ir3.add(pageDicPO);
+    
+
+    const arr = new Array();
+    for (let i = 0; i < 52; i++)
+        arr.push("abcdefghijklmnopqrstuvwxyz    abcdefghijklmnopqrstuvwxyz    abcdefghij");
+    
+    const strm = new TextStreamPO(arr,fontName,12,52.5,842-57,14);
+    //new TextStreamPO(arr_string, fontName, fontSize, startX, startY,textLeading)
+    ir5.add(strm);
+
+    pg.testWriter();
+}
+writeSampleTest();
