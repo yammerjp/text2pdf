@@ -237,7 +237,7 @@ class DictionaryPO extends PdfObject{
         for (let key in this.content) {
             str += `${key} ${this.content[key].toString()}\n`;
         }
-        str += ">>\n";
+        str += ">>";
         return str;
     }
 }/*
@@ -269,6 +269,42 @@ class IndirectReference extends PdfObject{
     }
 }
 
+class IndirectReferences {
+    constructor() {
+        this.arr = new Array();
+        this.arr.push(new IndirectReference0());
+    }
+    add() {
+        const newIR = new IndirectReference(this.arr.length);
+        this.arr.push(newIR);
+        return newIR;
+    }
+    call(num) {
+        if (num <= this.arr.length)
+            return this.arr[num];
+        else
+            return undefined;
+    }
+}
+class IndirectReference0 extends IndirectReference {
+    constructor() {
+        super();
+        this.number = 0;
+        this.content = new Array();
+    }
+    refer() {
+        return `${this.number} 0 R`;
+    }
+    toString() {
+        return this.refer();
+    }
+    define() {
+        return "";
+    }
+    add(arg) {
+    }
+}
+
 class StringStreamPdfObject {
     constructor() {
         this.content = "";
@@ -276,13 +312,98 @@ class StringStreamPdfObject {
         this.lenDic.add(new NamePO("Length"),new NumberPO(0));
     }
     add(line) {
-        this.content += line;
+        this.content += `${line}\n`;
         this.lenDic.add(new NamePO("Length"), new NumberPO(this.content.length));
     }
     toString() {
         return `${this.lenDic.toString()}stream\n${this.content}\nendstream\n`;
     }
 }
+
+class PDFGenerator {
+    constructor() {
+        this.IRs = new IndirectReferences();
+        
+    }
+    import(filename) {
+
+    }
+    write(filename) {
+        let content = `%PDF-1.7\n%????\n`;
+        let crossReferenceTable = `xref\n0 ${this.IRs.arr.length}\n`;
+        this.IRs.arr.forEach((ir, idx) => {
+            if (idx == 0) {
+                crossReferenceTable += `0000000000 65535 f \n`; 
+            }
+            else {
+                const byteOffset = ("0000000000" + content.length.toString(10)).slice(-10);
+                crossReferenceTable += `${byteOffset} 00000 n \n`;    
+                content += ir.define();
+            }
+        });
+
+        const dict = new DictionaryPO();
+        dict.add(new NamePO("Root"), this.IRs.call(1));
+        dict.add(new NamePO("Size"),new NumberPO(this.IRs.arr.length));
+        const trailer = `trailer\n\n${dict.toString()}startxref\n${content.length}\n%%EOF`;
+        
+        return content+crossReferenceTable+trailer;
+    }
+    testWriter() {
+        console.log(this.write(1));
+    }
+}
+
+const pg = new PDFGenerator();
+const ir1 = pg.IRs.add();
+const ir2 = pg.IRs.add();
+const ir3 = pg.IRs.add();
+const ir4 = pg.IRs.add();
+const ir5 = pg.IRs.add();
+
+const dict1 = new DictionaryPO();
+dict1.add(new NamePO("Pages"),ir2);
+dict1.add(new NamePO("Type"),new NamePO("Catalog"));
+ir1.add(dict1);
+
+
+
+const dict2 = new DictionaryPO();
+dict2.add(new NamePO("Kids"), new ArrayPO(ir3));
+dict2.add(new NamePO("Count"), new NumberPO(1));
+dict2.add(new NamePO("Type"),new NamePO("Pages"));
+ir2.add(dict2);
+
+
+const dict4_3 = new DictionaryPO();
+dict4_3.add(new NamePO("BaseFont"),new NamePO("Times-Roman"));
+dict4_3.add(new NamePO("Subtype"),new NamePO("Type1"));
+dict4_3.add(new NamePO("Type"), new NamePO("Font"));
+const dict4_2 = new DictionaryPO();
+dict4_2.add(new NamePO("F0"),dict4_3);
+const dict4_1 = new DictionaryPO();
+dict4_1.add(new NamePO("Font"),dict4_2);
+ir4.add(dict4_1);
+
+const dict3 = new DictionaryPO();
+dict3.add(new NamePO("Parent"), ir2);
+dict3.add(new NamePO("MediaBox"), new ArrayPO(new NumberPO(0), new NumberPO(0), new NumberPO(595), new NumberPO(842)));
+dict3.add(new NamePO("Resources"), ir4);
+dict3.add(new NamePO("Contents"), ir5);
+dict3.add(new NamePO("Type"), new NamePO("Page"));
+ir3.add(dict3);
+
+const strm = new StringStreamPdfObject();
+strm.add("1. 0. 0. 1. 50. 720. cm");
+strm.add("BT");
+strm.add("/F0 36 Tf");
+strm.add("(Hello, world!) Tj");
+strm.add("ET");
+
+ir5.add(strm);
+
+pg.testWriter();
+
 /*
 const indiRef = new IndirectReference(3);
 const obj = new DictionaryPO();
