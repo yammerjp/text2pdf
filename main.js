@@ -3,6 +3,7 @@ const LINE_WIDTH_MAX = 80;
 const fs = require("fs");
 
 function MsGothicDictionary() {
+//MSゴシックのフォント定義となるPDFの辞書オブジェクトが戻り値
     const dic = new DictionaryPO();
     const dic2 = new DictionaryPO();
     const dic3 = new DictionaryPO();
@@ -43,7 +44,7 @@ function MsGothicDictionary() {
     return dic;
 }
 
-function IsHalfWidth(chrCode) {
+function IsHalfWidth(chrCode) {//文字コードを引数に、半角文字であればtrueを返す
     if ((chrCode >= 0x00 && chrCode < 0x81) ||
         (chrCode === 0xf8f0) ||
         (chrCode >= 0xff61 && chrCode < 0xffa0) ||
@@ -56,7 +57,7 @@ function IsHalfWidth(chrCode) {
     }
 };
 
-class PdfObject {
+class PdfObject {//PDFファイルの構造としてのオブジェクト
     constructor(value) {
         this.content = value;
     }
@@ -64,26 +65,26 @@ class PdfObject {
         return this.content;
     }
 }
-class BooleanPO extends PdfObject{
+class BooleanPO extends PdfObject{//PDFファイルの構造としての真偽値オブジェクト
     constructor(value) {
         super(value);
     }
 
 }
-class NullPO extends PdfObject {
+class NullPO extends PdfObject {//PDFファイルの構造としてのnullオブジェクト
     toString() {
         return 'null';
     }
 }
-class NumberPO extends PdfObject {
+class NumberPO extends PdfObject {//PDFファイルの構造としての数値オブジェクト 数値をthis.contentとして持ち、toString()できる。
 
 }
-class HarfWidthStringPO extends PdfObject {
+class HarfWidthStringPO extends PdfObject {//PDFファイルの構造としての文字列オブジェクト 文字列をthis.contentとして持ち、toString()で'()'で囲んで返す
     toString() {
         return `(${this.content})`;
     }
 }
-class StringPO extends PdfObject{
+class StringPO extends PdfObject{//PDFファイルの構造としての文字列オブジェクト 文字列をthis.contentとして持ち、toString()で'<>'で囲んでバイナリ形式で返す
     toString() {/*
         for (let i = 0; i < this.content.length; i++) {
             if (IsHalfWidth(this.content.charCodeAt(i)))
@@ -108,12 +109,12 @@ class StringPO extends PdfObject{
     }
 }
 
-class NamePO extends PdfObject{
+class NamePO extends PdfObject{//PDFファイルの構造としての名前オブジェクト 文字列をthis.contentとして持ち、toString()で'/'をつけて返す
     toString() {
         return `/${this.content}`;
     }
 }
-class ArrayPO extends PdfObject {
+class ArrayPO extends PdfObject {//PDFファイルの構造としての配列オブジェクト PDFのオブジェクトの配列を持つ toString()で[data1 data2 ...]のように返す
     constructor(...arr) {
         super();
         if (arr instanceof Array)
@@ -136,7 +137,7 @@ class ArrayPO extends PdfObject {
         return this.content.length;
     }
 }
-class DictionaryPO extends PdfObject{
+class DictionaryPO extends PdfObject{//PDFファイルの構造としての辞書オブジェクト 名前オブジェクトと任意オブジェクトの対を、任意の数持つ
     constructor() {
         super();
         this.content = {};
@@ -144,7 +145,7 @@ class DictionaryPO extends PdfObject{
     add(key,value) {
         this.content[key.toString()] = value;
     }
-    toString() {
+    toString() {//<<\n/Name1 Object1\n/Name2 Object2 /\...>> のように返す
         let str = "<<\n";
         for (let key in this.content) {
             str += `${key} ${this.content[key].toString()}\n`;
@@ -153,7 +154,7 @@ class DictionaryPO extends PdfObject{
         return str;
     }
 }
-class IndirectReference extends PdfObject{
+class IndirectReference extends PdfObject{//PDFファイルの構造としての間接オブジェクト 間接オブジェクト番号と、任意の数の任意オブジェクトを持つ
     constructor(number) {
         super();
         this.number = number;
@@ -162,10 +163,10 @@ class IndirectReference extends PdfObject{
     refer() {
         return `${this.number} 0 R`;
     }
-    toString() {
+    toString() {// ObjNum 0 R
         return this.refer();
     }
-    define() {
+    define() { // ObjNum 0 obj\nObj1\nObj2\n ... \nendobj\n
         let str = `${this.number} 0 obj\n`;
         this.content.forEach((cont) => {
             str +=`${cont.toString()}\n`;
@@ -177,7 +178,7 @@ class IndirectReference extends PdfObject{
         this.content.push(arg);
     }
 }
-class StringToString{
+class StringToString{////PDFファイルの構造としての任意のオブジェクト ファイルに表記されているまま定義することができる。
     constructor(text){
         this.text = text;
     }
@@ -185,7 +186,7 @@ class StringToString{
         return this.text;
     }
 }
-class IndirectReference0 extends IndirectReference {
+class IndirectReference0 extends IndirectReference {//PDFファイルの構造としての0番目のオブジェクト 特別な存在
     constructor() {
         super();
         this.number = 0;
@@ -203,7 +204,7 @@ class IndirectReference0 extends IndirectReference {
     add(arg) {
     }
 }
-class IndirectReferences {
+class IndirectReferences { //出力PDFのすべての間接オブジェクトを配列としてもつ
     constructor() {
         this.arr = new Array();
         this.arr.push(new IndirectReference0());
@@ -219,7 +220,7 @@ class IndirectReferences {
             return undefined;
     }
 }
-class StringStreamPO {
+class StringStreamPO { //PDFファイルの構造としてのストリームオブジェクト
     constructor() {
         this.content = "";
         this.lenDic = new DictionaryPO();
@@ -233,7 +234,7 @@ class StringStreamPO {
         return `${this.lenDic.toString()}stream\n${this.content}\nendstream\n`;
     }
 }
-class TextStreamPO extends StringStreamPO {
+class TextStreamPO extends StringStreamPO { //文字列描画のみが可能なストリームオブジェクト
     constructor() {
         //arr_string ...  string の配列
         super();
@@ -288,7 +289,7 @@ class TextStreamPO extends StringStreamPO {
         return super.toString();
     }
 }
-class FontDictionaryPO extends DictionaryPO {
+class FontDictionaryPO extends DictionaryPO { //フォント定義に用いる辞書オブジェクト
     constructor(fontName,baseFont,subtype,encoding,descendantFonts_arrPO) {
         super();
 
@@ -306,7 +307,7 @@ class FontDictionaryPO extends DictionaryPO {
         this.fontName = fontName;
     }
 }
-class PageDictionaryPO extends DictionaryPO {
+class PageDictionaryPO extends DictionaryPO { //ページ定義に用いる辞書オブジェクト
     constructor(parentPO,resourcesPO,contensPO) {
         super();
         const a4 = new ArrayPO(new NumberPO(0), new NumberPO(0), new NumberPO(595), new NumberPO(842));
@@ -317,7 +318,7 @@ class PageDictionaryPO extends DictionaryPO {
         super.add(new NamePO("Type"), new NamePO("Page"));
     }
 }
-class PageTreeDictionaryPO extends DictionaryPO {
+class PageTreeDictionaryPO extends DictionaryPO { //ページツリー定義に用いる辞書オブジェクト
     constructor(arrPO_kids) {
         super();
         super.add(new NamePO("Kids"), arrPO_kids);
@@ -325,7 +326,7 @@ class PageTreeDictionaryPO extends DictionaryPO {
         super.add(new NamePO("Type"), new NamePO("Pages"));
     }
 }
-class DocumentCalalogDictionaryPO extends DictionaryPO {
+class DocumentCalalogDictionaryPO extends DictionaryPO { //ドキュメントカタログ定義に用いる辞書オブジェクト
     constructor(pageTreePO) {
         super();
         super.add(new NamePO("Pages"), pageTreePO);
@@ -334,7 +335,7 @@ class DocumentCalalogDictionaryPO extends DictionaryPO {
 }
 
 
-class PdfGenerator {
+class PdfGenerator { //textを入力としてPDFを出力する
     constructor(text) {
         this.IRs = new IndirectReferences();
         this.documentCatalog = this.IRs.add();
