@@ -1,41 +1,47 @@
 const CHARACTOR_ENCODING = "utf8";
 const LINE_WIDTH_MAX = 80;
 const fs = require("fs");
-const msGothicDicString = `<<
-/Type /Font
-/Subtype /CIDFontType2
-/BaseFont /#82l#82r#83S#83V#83b#83N
-/WinCharSet 128
-/FontDescriptor <<
-/Type /FontDescriptor
-/FontName /#82l#82r#83S#83V#83b#83N
-/Flags 39
-/FontBBox [ -150 -147 1100 853 ]
-/MissingWidth 507
-/StemV 92
-/StemH 92
-/ItalicAngle 0
-/CapHeight 853
-/XHeight 597
-/Ascent 853
-/Descent -147
-/Leading 0
-/MaxWidth 1000
-/AvgWidth 507
-/Style << /Panose <0805020B0609000000000000> >>
->>
-/CIDSystemInfo
-<<
- /Registry(Adobe)
- /Ordering(Japan1)
- /Supplement 2
->>
-/DW 1000
-/W [
- 231 389 500
- 631 631 500
-]
->>`;
+
+function MsGothicDictionary() {
+    const dic = new DictionaryPO();
+    const dic2 = new DictionaryPO();
+    const dic3 = new DictionaryPO();
+    const dic2_2 = new DictionaryPO();
+    
+    dic.add(new NamePO("Type"), new NamePO("Font"));
+    dic.add(new NamePO("Subtype"), new NamePO("CIDFontType2"));
+    dic.add(new NamePO("BaseFont"), new NamePO("#82l#82r#83S#83V#83b#83N"));
+    dic.add(new NamePO("WinCharSet"), new NumberPO(128));
+    dic.add(new NamePO("FontDescriptor"), dic2);
+    dic.add(new NamePO("CIDSystemInfo"), dic3);
+    dic.add(new NamePO("DW"), new NumberPO(1000));
+    dic.add(new NamePO("W"), new ArrayPO(new NumberPO(231), new NumberPO(389), new NumberPO(500), new NumberPO(631), new NumberPO(631), new NumberPO(500)));
+    
+    dic2.add(new NamePO("Type"), new NamePO("FontDescriptor"));
+    dic2.add(new NamePO("FontName"), new NamePO("#82l#82r#83S#83V#83b#83N"));
+    dic2.add(new NamePO("Flags"), new NumberPO(39));
+    dic2.add(new NamePO("FontBBox"), new ArrayPO(new NumberPO(-150), new NumberPO(-147), new NumberPO(1100), new NumberPO(853)));
+    dic2.add(new NamePO("MissingWidth"), new NumberPO(507));
+    dic2.add(new NamePO("StemV"), new NumberPO(92));
+    dic2.add(new NamePO("StemH"), new NumberPO(92));
+    dic2.add(new NamePO("ItalicAngle"), new NumberPO(0));
+    dic2.add(new NamePO("CapHeight"), new NumberPO(853));
+    dic2.add(new NamePO("XHeight"), new NumberPO(597));
+    dic2.add(new NamePO("Ascent"), new NumberPO(853));
+    dic2.add(new NamePO("Descent"), new NumberPO(-147));
+    dic2.add(new NamePO("Leading"), new NumberPO(0));
+    dic2.add(new NamePO("MaxWidth"), new NumberPO(1000));
+    dic2.add(new NamePO("AvgWidth"), new NumberPO(507));
+    dic2.add(new NamePO("Style"), dic2_2);
+
+    dic2_2.add(new NamePO("Panose"), new StringToString("<0805020B0609000000000000>"));
+
+    dic3.add(new NamePO("Registry"), new HarfWidthStringPO("Adobe"));
+    dic3.add(new NamePO("Ordering"), new HarfWidthStringPO("Japan1"));
+    dic3.add(new NamePO("Supplement"), new NumberPO(2));
+
+    return dic;
+}
 
 function IsHalfWidth(chrCode) {
     if ((chrCode >= 0x00 && chrCode < 0x81) ||
@@ -78,7 +84,17 @@ class HarfWidthStringPO extends PdfObject {
     }
 }
 class StringPO extends PdfObject{
-    toString() {
+    toString() {/*
+        for (let i = 0; i < this.content.length; i++) {
+            if (IsHalfWidth(this.content.charCodeAt(i)))
+                continue;
+            return this.toStringBinary();
+        }
+        return this.toStringText();
+        */
+        return this.toStringBinary();
+    }
+    toStringBinary() {
         let str = "<";
         for (let i = 0; i < this.content.length; i++) {
             str += ("0000"+ this.content.charCodeAt(i).toString(16)).slice(-4);
@@ -86,6 +102,9 @@ class StringPO extends PdfObject{
         }
         str += ">";
         return str;
+    }
+    toStringText() {
+        return `(${this.content})`;
     }
 }
 
@@ -223,13 +242,12 @@ class TextStreamPO extends StringStreamPO {
     writeLine(arr_string, arr_isHarfWidth, fontName, fontSize) {
         super.add(`${new NamePO(fontName)} ${fontSize} Tf`);
         arr_string.forEach((string, idx) => {
-            super.add(`${new NumberPO(arr_isHarfWidth[idx]?-7:0)} Tc`);
+            super.add(`${new NumberPO(arr_isHarfWidth[idx]?(-fontSize/2):0)} Tc`);
             let str = `${new StringPO(string).toString()} Tj`;
             if (idx + 1 == arr_string.length)
                 str += " T*";//改行記号
             super.add(str);
         });
-        super.add();
     }
     add(arr_line, fontName, fontSize, startX, startY, textLeading) {
         
@@ -276,7 +294,7 @@ class FontDictionaryPO extends DictionaryPO {
 
         const dict = new DictionaryPO();
         dict.add(new NamePO("Type"), new NamePO("Font"));
-        if(fontName!=undefined) dict.add(new NamePO("Subtype"),new NamePO(subtype));
+        if(subtype!=undefined) dict.add(new NamePO("Subtype"),new NamePO(subtype));
         if(baseFont!=undefined) dict.add(new NamePO("BaseFont"), new NamePO(baseFont));
         if(encoding!=undefined) dict.add(new NamePO("Encoding"),new NamePO(encoding));
         if(descendantFonts_arrPO!=undefined) dict.add(new NamePO("DescendantFonts"),descendantFonts_arrPO);
@@ -319,12 +337,18 @@ class DocumentCalalogDictionaryPO extends DictionaryPO {
 class PdfGenerator {
     constructor(text) {
         this.IRs = new IndirectReferences();
-
         this.documentCatalog = this.IRs.add();
         this.pageTree = this.IRs.add();
+
+        this.pageArrPO = new ArrayPO();
+
+        this.defineFont();
+        this.makePages(text);
+    }
+    defineFont() {
         this.font = this.IRs.add();
         this.fontDescriptor = this.IRs.add();
-        this.fontDescriptor.add(new StringToString(msGothicDicString));
+        this.fontDescriptor.add(MsGothicDictionary());
         
         this.fontName = "F0";
         this.font.add(new FontDictionaryPO(
@@ -332,37 +356,25 @@ class PdfGenerator {
             "#82l#82r#83S#83V#83b#83N",
             "Type0", "UniJIS-UTF16-H",
             new ArrayPO(this.fontDescriptor)
-        ))
-        this.pageArrPO = new ArrayPO();
-
-
+        ));
+    }
+    makePages(text){
         const lines = splitLines(text);
         const pages = splitPages(lines);
     
         pages.forEach((lines) => {
-            const textStream = this.IRs.add();
-            const page = this.IRs.add();
-    
-            const strm = new TextStreamPO();
-            strm.add(lines,this.fontName,12,52.5,842-57,14);
-            //new TextStreamPO().add(arr_line, fontName, fontSize, startX, startY, textLeading)
-            textStream.add(strm);
-        
-    
-            page.add(new PageDictionaryPO(this.pageTree, this.font, textStream));
-            
-            this.pageArrPO.add(page);
+            this.definePage(lines);
         });
 
-        this.pageTree.add(new PageTreeDictionaryPO(this.pageArrPO));
-        this.documentCatalog.add(new DocumentCalalogDictionaryPO(this.pageTree));
+        this.structPageTree();
 
         function splitLines(text) {
+            text = text.replace(/\r/g, '');
             //行ごとに分割
             //各行がLINE_WIDTH_MAXを超える場合は改行して分割
             const lines = new Array();
             
-            for (let i = 0, j = 0, lineWidth = 0, max = text.length; i < max; i++) {
+            for (let i = 0, j = -1, lineWidth = 0, max = text.length; i < max; i++) {
                 lineWidth += IsHalfWidth(text.charCodeAt(i)) ? 1 : 2;
                 if (i == max - 1 || text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX || (lineWidth == LINE_WIDTH_MAX - 1 && !(IsHalfWidth(text.charCodeAt(i + 1))))) {
                     let line = text.slice(j + 1, i + 1);
@@ -392,7 +404,24 @@ class PdfGenerator {
         }
 
     }
-    write(filename) {
+    definePage(lines) {
+        const textStream = this.IRs.add();
+        const page = this.IRs.add();
+
+        const strm = new TextStreamPO();
+        strm.add(lines,this.fontName,12,52.5,842-57,14);
+        //new TextStreamPO().add(arr_line, fontName, fontSize, startX, startY, textLeading)
+        textStream.add(strm);
+    
+        page.add(new PageDictionaryPO(this.pageTree, this.font, textStream));
+        
+        this.pageArrPO.add(page);
+    }
+    structPageTree() {
+        this.pageTree.add(new PageTreeDictionaryPO(this.pageArrPO));
+        this.documentCatalog.add(new DocumentCalalogDictionaryPO(this.pageTree));
+    }
+    generate() {
         let content = `%PDF-1.7\n%????\n`;
         let crossReferenceTable = `xref\n0 ${this.IRs.arr.length}\n`;
         this.IRs.arr.forEach((ir, idx) => {
@@ -413,11 +442,10 @@ class PdfGenerator {
         
         return content+crossReferenceTable+trailer;
     }
-    testWriter() {
-        console.log(this.write(1));
-    }
 }
 
-const pg2 = new PdfGenerator(fs.readFileSync(process.argv[2], CHARACTOR_ENCODING));
-pg2.testWriter();
+const pdfGenerator = new PdfGenerator(fs.readFileSync(process.argv[2], CHARACTOR_ENCODING));
+const writer = fs.createWriteStream(process.argv[3]);
+writer.write(pdfGenerator.generate());
+
 
