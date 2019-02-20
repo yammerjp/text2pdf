@@ -214,39 +214,6 @@ class StringStreamPO {
         return `${this.lenDic.toString()}stream\n${this.content}\nendstream\n`;
     }
 }
-class PdfGenerator {
-    constructor() {
-        this.IRs = new IndirectReferences();
-        
-    }
-    import(filename) {
-
-    }
-    write(filename) {
-        let content = `%PDF-1.7\n%????\n`;
-        let crossReferenceTable = `xref\n0 ${this.IRs.arr.length}\n`;
-        this.IRs.arr.forEach((ir, idx) => {
-            if (idx == 0) {
-                crossReferenceTable += `0000000000 65535 f \n`; 
-            }
-            else {
-                const byteOffset = ("0000000000" + content.length.toString(10)).slice(-10);
-                crossReferenceTable += `${byteOffset} 00000 n \n`;    
-                content += ir.define();
-            }
-        });
-
-        const dict = new DictionaryPO();
-        dict.add(new NamePO("Root"), this.IRs.call(1));
-        dict.add(new NamePO("Size"),new NumberPO(this.IRs.arr.length));
-        const trailer = `trailer\n\n${dict.toString()}startxref\n${content.length}\n%%EOF`;
-        
-        return content+crossReferenceTable+trailer;
-    }
-    testWriter() {
-        console.log(this.write(1));
-    }
-}
 class TextStreamPO extends StringStreamPO {
     constructor() {
         //arr_string ...  string の配列
@@ -348,64 +315,109 @@ class DocumentCalalogDictionaryPO extends DictionaryPO {
     }
 }
 
-function splitLines() {
-    //コマンドライン引数からファイルを読み込んで、行ごとに分割
-    //各行がLINE_WIDTH_MAXを超える場合は改行して分割
-    const text = fs.readFileSync(process.argv[2], CHARACTOR_ENCODING);
-    const lines = new Array();
+
+class PdfGenerator {
+    constructor(text) {
+        this.IRs = new IndirectReferences();
+
+        this.documentCatalog = this.IRs.add();
+        this.pageTree = this.IRs.add();
+        this.font = this.IRs.add();
+        this.fontDescriptor = this.IRs.add();
+        this.fontDescriptor.add(new StringToString(msGothicDicString));
+        
+        this.fontName = "F0";
+        this.font.add(new FontDictionaryPO(
+            this.fontName,
+            "#82l#82r#83S#83V#83b#83N",
+            "Type0", "UniJIS-UTF16-H",
+            new ArrayPO(this.fontDescriptor)
+        ))
+        this.pageArrPO = new ArrayPO();
+
+
+        const lines = splitLines(text);
+        const pages = splitPages(lines);
     
-    for (let i = 0, j = 0, lineWidth = 0, max = text.length; i < max; i++) {
-        lineWidth += IsHalfWidth(text.charCodeAt(i))?1:2;
-        if (i == max - 1|| text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX  || (lineWidth==LINE_WIDTH_MAX-1&&!(IsHalfWidth(text.charCodeAt(i+1))))) {
-            let line = text.slice(j+1, i+1);
-            line = line.replace(/\r?\n/g, '');
-            lines.push(line);
-            j = i;
-            lineWidth = 0;
+        pages.forEach((lines) => {
+            const textStream = this.IRs.add();
+            const page = this.IRs.add();
+    
+            const strm = new TextStreamPO();
+            strm.add(lines,this.fontName,12,52.5,842-57,14);
+            //new TextStreamPO().add(arr_line, fontName, fontSize, startX, startY, textLeading)
+            textStream.add(strm);
+        
+    
+            page.add(new PageDictionaryPO(this.pageTree, this.font, textStream));
+            
+            this.pageArrPO.add(page);
+        });
+
+        this.pageTree.add(new PageTreeDictionaryPO(this.pageArrPO));
+        this.documentCatalog.add(new DocumentCalalogDictionaryPO(this.pageTree));
+
+        function splitLines(text) {
+            //行ごとに分割
+            //各行がLINE_WIDTH_MAXを超える場合は改行して分割
+            const lines = new Array();
+            
+            for (let i = 0, j = 0, lineWidth = 0, max = text.length; i < max; i++) {
+                lineWidth += IsHalfWidth(text.charCodeAt(i)) ? 1 : 2;
+                if (i == max - 1 || text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX || (lineWidth == LINE_WIDTH_MAX - 1 && !(IsHalfWidth(text.charCodeAt(i + 1))))) {
+                    let line = text.slice(j + 1, i + 1);
+                    line = line.replace(/\r?\n/g, '');
+                    lines.push(line);
+                    j = i;
+                    lineWidth = 0;
+                }
+            }
+            return lines;
         }
+        function splitPages(lines) {
+            //ページごとにlinesを分割して配列として返却
+            const pages = new Array();
+            let page = new Array();
+            const LINE_HEIGHT_MAX = 52;
+            lines.forEach((line, idx) => {
+                if (idx != 0 && idx % LINE_HEIGHT_MAX == 0) {
+                    pages.push(page);
+                    page = new Array;
+                }
+                page.push(line);
+            });
+            pages.push(page);
+            
+            return pages;
+        }
+
     }
-    return lines;
+    write(filename) {
+        let content = `%PDF-1.7\n%????\n`;
+        let crossReferenceTable = `xref\n0 ${this.IRs.arr.length}\n`;
+        this.IRs.arr.forEach((ir, idx) => {
+            if (idx == 0) {
+                crossReferenceTable += `0000000000 65535 f \n`; 
+            }
+            else {
+                const byteOffset = ("0000000000" + content.length.toString(10)).slice(-10);
+                crossReferenceTable += `${byteOffset} 00000 n \n`;    
+                content += ir.define();
+            }
+        });
+
+        const dict = new DictionaryPO();
+        dict.add(new NamePO("Root"), this.IRs.call(1));
+        dict.add(new NamePO("Size"),new NumberPO(this.IRs.arr.length));
+        const trailer = `trailer\n\n${dict.toString()}startxref\n${content.length}\n%%EOF`;
+        
+        return content+crossReferenceTable+trailer;
+    }
+    testWriter() {
+        console.log(this.write(1));
+    }
 }
 
-function writeSampleTest() {
-    const pg = new PdfGenerator();
-    const documentCatalog = pg.IRs.add();
-    const pageTree = pg.IRs.add();
-    const page = pg.IRs.add();
-    const font = pg.IRs.add();
-    const textStream = pg.IRs.add();
-    const fontDescriptor = pg.IRs.add();
-    fontDescriptor.add(new StringToString(msGothicDicString));
+const pg2 = new PdfGenerator(fs.readFileSync(process.argv[2], CHARACTOR_ENCODING));
+pg2.testWriter();
 
-    //ドキュメントカタログ
-    documentCatalog.add(new DocumentCalalogDictionaryPO(pageTree));
-        //new DocumentCalalogDictionaryPO(pageTreePO);
-
-    //ページツリー
-    pageTree.add(new PageTreeDictionaryPO(new ArrayPO(page)));
-        //new PageTreeDictionaryPO(arrPO_kids);
-    
-    //ページ
-    page.add(new PageDictionaryPO(pageTree, font, textStream));
-        //new PageDictionaryPO(parentPO,resourcesPO,contensPO);
-
-    //フォント
-    const fontName = "F0";
-    font.add(new FontDictionaryPO(
-        fontName,
-        "#82l#82r#83S#83V#83b#83N",
-        "Type0", "UniJIS-UTF16-H",
-        new ArrayPO(fontDescriptor)
-    )); //new FontDictionaryPO(fontName,baseFont,subtype,encoding,arrPO_fontDescriptor);
-    
-    //描画
-    const arr = splitLines();
-    const strm = new TextStreamPO();
-    strm.add(arr,fontName,12,52.5,842-57,14);
-    //new TextStreamPO().add(arr_line, fontName, fontSize, startX, startY, textLeading)
-    textStream.add(strm);
-
-    pg.testWriter();
-}
-
-writeSampleTest();

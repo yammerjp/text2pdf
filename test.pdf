@@ -8,21 +8,12 @@
 endobj
 2 0 obj
 <<
-/Kids [3 0 R]
-/Count 1
+/Kids [6 0 R 8 0 R]
+/Count 2
 /Type /Pages
 >>
 endobj
 3 0 obj
-<<
-/Parent 2 0 R
-/MediaBox [0 0 595 842]
-/Resources 4 0 R
-/Contents 5 0 R
-/Type /Page
->>
-endobj
-4 0 obj
 <<
 /Font <<
 /F0 <<
@@ -30,14 +21,51 @@ endobj
 /Subtype /Type0
 /BaseFont /#82l#82r#83S#83V#83b#83N
 /Encoding /UniJIS-UTF16-H
-/DescendantFonts [6 0 R]
+/DescendantFonts [4 0 R]
 >>
 >>
 >>
 endobj
+4 0 obj
+<<
+/Type /Font
+/Subtype /CIDFontType2
+/BaseFont /#82l#82r#83S#83V#83b#83N
+/WinCharSet 128
+/FontDescriptor <<
+/Type /FontDescriptor
+/FontName /#82l#82r#83S#83V#83b#83N
+/Flags 39
+/FontBBox [ -150 -147 1100 853 ]
+/MissingWidth 507
+/StemV 92
+/StemH 92
+/ItalicAngle 0
+/CapHeight 853
+/XHeight 597
+/Ascent 853
+/Descent -147
+/Leading 0
+/MaxWidth 1000
+/AvgWidth 507
+/Style << /Panose <0805020B0609000000000000> >>
+>>
+/CIDSystemInfo
+<<
+ /Registry(Adobe)
+ /Ordering(Japan1)
+ /Supplement 2
+>>
+/DW 1000
+/W [
+ 231 389 500
+ 631 631 500
+]
+>>
+endobj
 5 0 obj
 <<
-/Length 10853
+/Length 6842
 >>stream
 BT
 52.5 785 Td
@@ -358,6 +386,27 @@ undefined
 -7 Tc
 <002d00200046007500640065006d006f006a0069002e006d0065> Tj T*
 undefined
+ET
+
+endstream
+
+endobj
+6 0 obj
+<<
+/Parent 2 0 R
+/MediaBox [0 0 595 842]
+/Resources 3 0 R
+/Contents 5 0 R
+/Type /Page
+>>
+endobj
+7 0 obj
+<<
+/Length 4035
+>>stream
+BT
+52.5 785 Td
+14 TL
 /F0 12 Tf
 0 Tc
 <> Tj T*
@@ -557,57 +606,31 @@ ET
 endstream
 
 endobj
-6 0 obj
+8 0 obj
 <<
-/Type /Font
-/Subtype /CIDFontType2
-/BaseFont /#82l#82r#83S#83V#83b#83N
-/WinCharSet 128
-/FontDescriptor <<
-/Type /FontDescriptor
-/FontName /#82l#82r#83S#83V#83b#83N
-/Flags 39
-/FontBBox [ -150 -147 1100 853 ]
-/MissingWidth 507
-/StemV 92
-/StemH 92
-/ItalicAngle 0
-/CapHeight 853
-/XHeight 597
-/Ascent 853
-/Descent -147
-/Leading 0
-/MaxWidth 1000
-/AvgWidth 507
-/Style << /Panose <0805020B0609000000000000> >>
->>
-/CIDSystemInfo
-<<
- /Registry(Adobe)
- /Ordering(Japan1)
- /Supplement 2
->>
-/DW 1000
-/W [
- 231 389 500
- 631 631 500
-]
+/Parent 2 0 R
+/MediaBox [0 0 595 842]
+/Resources 3 0 R
+/Contents 7 0 R
+/Type /Page
 >>
 endobj
 xref
-0 7
+0 9
 0000000000 65535 f 
 0000000015 00000 n 
 0000000064 00000 n 
-0000000121 00000 n 
-0000000225 00000 n 
-0000000383 00000 n 
-0000011289 00000 n 
+0000000127 00000 n 
+0000000285 00000 n 
+0000000826 00000 n 
+0000007720 00000 n 
+0000007824 00000 n 
+0000011911 00000 n 
 trailer
 
 <<
 /Root 1 0 R
-/Size 7
+/Size 9
 >>startxref
-11830
+12015
 %%EOF
