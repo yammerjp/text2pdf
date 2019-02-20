@@ -1,166 +1,6 @@
-//console.log(process.argv[2]);//コマンドライン第一引数
-//console.log(process.argv[3]);//コマンドライン第二引数
-
 const CHARACTOR_ENCODING = "utf8";
-
-/*
-const readline = require("readline");
-const stream = fs.createReadStream(process.argv[2], "utf8");
-
-const render = readline.createInterface({ input: stream });
-const writer = fs.createWriteStream(process.argv[3]);
-
-let lns = "";
-render.on("line", (data) => {
-    const ln = splitLine(data, 84) + "\n";
-    writer.write(ln);
-    lns += ln;
-});
-*/
-const LINE_WIDTH_MAX = 36;
+const LINE_WIDTH_MAX = 80;
 const fs = require("fs");
-
-function splitLines() {
-    const text = fs.readFileSync(process.argv[2], CHARACTOR_ENCODING);
-    const lines = new Array();
-    
-    for (let i = 0, j = 0, lineWidth = 0, max = text.length; i < max; i++) {
-        lineWidth += 1;
-        if (i == max - 1|| text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX  || (lineWidth==LINE_WIDTH_MAX-1&&!(isHalfWidth(text.charCodeAt(i+1))))) {
-            let line = text.slice(j+1, i+1);
-            line = line.replace(/\r?\n/g, '');
-            lines.push(line);
-            j = i;
-            lineWidth = 0;
-        }
-    }
-    return lines;
-//    console.log(lines.join("\n"));
-//    console.log(lines.length);
-//    console.log(lines);
-
-    
-}
-//splitPage();
-/*
-function splitLine(str, num) {//第二引数の文字数(全角は2文字分)で、strを行分割
-    let ret = "";
-    let result = 0;
-    for(let i=0;i<str.length;i++){
-        const chr = str.charCodeAt(i);
-        if(isHalfWidth(chr)){
-            result += 1;
-        }else{
-            result += 2;
-        }
-        ret += str[i];
-        if (result == num) {
-            ret += "\n";
-            result -= num;
-        } else if (result == num - 1
-         && !(isHalfWidth(str.charCodeAt(i + 1)))) {
-            ret += "\n";
-            result -= num-1;
-        }
-    }
-    return ret;
-}
-*/
-function isHalfWidth(chrCode) {
-    if ((chrCode >= 0x00 && chrCode < 0x81) ||
-        (chrCode === 0xf8f0) ||
-        (chrCode >= 0xff61 && chrCode < 0xffa0) ||
-        (chrCode >= 0xf8f1 && chrCode < 0xf8f4)) {
-        //半角文字
-        return true;
-    } else {
-        //それ以外
-        return false;
-    }
-};
-/*
-function writePDF(lines) {
-    let data;
-    let head =
-`%PDF-1.7
-%????`;
-    let obj = [
-`1 0 obj 
-<<
-/Pages 2 0 R
-/Type /Catalog
->>
-endobj `,
-`2 0 obj 
-<<
-/Kids [3 0 R]
-/Count 1
-/Type /Pages
->>
-endobj`,
-`4 0 obj 
-<<
-/Font 
-<<
-/F0 
-<<
-/BaseFont /Times-Roman
-/Subtype /Type1
-/Type /Font
->>
->>
->>
-endobj `,
-`3 0 obj 
-<<
-/Parent 2 0 R
-/MediaBox [0 0 595 842]
-/Resources 4 0 R
-/Contents 5 0 R
-/Type /Page
->>
-endobj `,
-`5 0 obj 
-<<
-/Length 59
->>
-stream
-1. 0. 0. 1. 50. 720. cm
-BT
-/F0 36 Tf
-(Hello, world!) Tj
-ET
-
-endstream 
-endobj`
-    ];
-    let bottom =
-`xref
-trailer
-
-<<
-/Root 1 0 R
-/Size 6
->>
-startxref
-0
-%%EOF`;
-    data += head+'\n';
-    obj.forEach((objt) => {
-        data += objt+'\n';
-    });
-    data+=bottom+'\n';
-//    data = lines;
-    fs.writeFile(process.argv[3], data, function (err) {
-        if (err) {
-            throw err;
-        }
-      });
-}
-
-
-*/
-
 const msGothicDicString = `<<
 /Type /Font
 /Subtype /CIDFontType2
@@ -196,6 +36,19 @@ const msGothicDicString = `<<
  631 631 500
 ]
 >>`;
+
+function IsHalfWidth(chrCode) {
+    if ((chrCode >= 0x00 && chrCode < 0x81) ||
+        (chrCode === 0xf8f0) ||
+        (chrCode >= 0xff61 && chrCode < 0xffa0) ||
+        (chrCode >= 0xf8f1 && chrCode < 0xf8f4)) {
+        //半角文字
+        return true;
+    } else {
+        //それ以外
+        return false;
+    }
+};
 
 class PdfObject {
     constructor(value) {
@@ -281,10 +134,6 @@ class DictionaryPO extends PdfObject{
         return str;
     }
 }
-/*
-class StreamPO {
-    constructor() {}
-}*/
 class IndirectReference extends PdfObject{
     constructor(number) {
         super();
@@ -399,25 +248,56 @@ class PdfGenerator {
     }
 }
 class TextStreamPO extends StringStreamPO {
-    constructor(arr_string, fontName, fontSize, startX, startY,textLeading) {
-    //arr_string ...  string の配列
+    constructor() {
+        //arr_string ...  string の配列
         super();
         super.add("BT");
+    }
+    writeLine(arr_string, arr_isHarfWidth, fontName, fontSize) {
         super.add(`${new NamePO(fontName)} ${fontSize} Tf`);
+        arr_string.forEach((string, idx) => {
+            super.add(`${new NumberPO(arr_isHarfWidth[idx]?-7:0)} Tc`);
+            let str = `${new StringPO(string).toString()} Tj`;
+            if (idx + 1 == arr_string.length)
+                str += " T*";//改行記号
+            super.add(str);
+        });
+        super.add();
+    }
+    add(arr_line, fontName, fontSize, startX, startY, textLeading) {
+        
         if (startX != undefined && startY != undefined)
             super.add(`${startX} ${startY} Td`);
         if (textLeading != undefined)
             super.add(`${textLeading} TL`);
-        arr_string.forEach((string, idx) => {
-            let str = `${new StringPO(string).toString()} Tj`;
-            if (idx + 1 != arr_string.length)
-                str += " T*";//改行記号
-            super.add(str);
+        
+        arr_line.forEach((line) => {
+            const [arr_string, arr_isHarfWidth] = DevideHarfOrFullWidthString(line);
+            this.writeLine(arr_string, arr_isHarfWidth,fontName,fontSize);
         });
+
+        function DevideHarfOrFullWidthString(line) {
+            //半角全角混合の文字列を渡すと、半全の変化ごとに切り分けて配列にする
+            //戻り値は、分割した配列と、同順で半角ならtrueの配列
+            const str_arr = new Array();
+            const font_arr = new Array();
+            let str = "";
+            let wasHarfWidth = IsHalfWidth(line.charCodeAt(0));
+            for (let i = 0; i < line.length; i++){
+                const isHalfWidth = IsHalfWidth(line.charCodeAt(i));
+                if (isHalfWidth != wasHarfWidth) {
+                    str_arr.push(str);
+                    str = "";
+                    font_arr.push(wasHarfWidth);
+                    wasHarfWidth = isHalfWidth;
+                }
+                str += line[i];
+            }
+            str_arr.push(str);
+            font_arr.push(wasHarfWidth);
+            return [str_arr,font_arr];
+        }
     }
-/*    addLine(line) {
-        super.add(line);
-    }*/
     toString() {
         super.add("ET");
         return super.toString();
@@ -467,34 +347,25 @@ class DocumentCalalogDictionaryPO extends DictionaryPO {
         super.add(new NamePO("Type"), new NamePO("Catalog"));
     }
 }
-/*
-function generateDictionaryPO_jp_koz_font() {
-    const dicPO = new DictionaryPO();
-    const dicPO2 = new DictionaryPO();
-    const dicPO3 = new DictionaryPO();
 
-    dicPO3.add(new NamePO("Type"), new NamePO("FontDescriptor"));
-    dicPO3.add(new NamePO("FontName"),new NamePO("KozMinPr6N-Regular"));
-    dicPO3.add(new NamePO("Flags"), new NumberPO(4));
-    dicPO3.add(new NamePO("FontBox"), new ArrayPO(new NumberPO(-437),new NumberPO(-340),new NumberPO(1147),new NumberPO(1317)));
-    dicPO3.add(new NamePO("ItalicAngle"), new NumberPO(0));
-    dicPO3.add(new NamePO("Ascent"), new NumberPO(1317));
-    dicPO3.add(new NamePO("Descent"), new NumberPO(-349));
-    dicPO3.add(new NamePO("CapHeight"), new NumberPO(742));
-    dicPO3.add(new NamePO("StemV"), new NumberPO(80));
-
-    dicPO2.add(new NamePO("Registry"),new HarfWidthStringPO("Adobe"));
-    dicPO2.add(new NamePO("Ordering"),new HarfWidthStringPO("Japan1"));
-    dicPO2.add(new NamePO("Supplement"), new NumberPO(6));
-
-    dicPO.add(new NamePO("Type"), new NamePO("Font"));
-    dicPO.add(new NamePO("Subtype"), new NamePO("CIDFontType0"));
-    dicPO.add(new NamePO("/BaseFont"),new NamePO("KozMinPr6N-Regular"));
-    dicPO.add(new NamePO("CIDSystemInfo"),dicPO2);
-    dicPO.add(new NamePO("FontDescriptor"), dicPO3);
-
-    return dicPO;
-}*/
+function splitLines() {
+    //コマンドライン引数からファイルを読み込んで、行ごとに分割
+    //各行がLINE_WIDTH_MAXを超える場合は改行して分割
+    const text = fs.readFileSync(process.argv[2], CHARACTOR_ENCODING);
+    const lines = new Array();
+    
+    for (let i = 0, j = 0, lineWidth = 0, max = text.length; i < max; i++) {
+        lineWidth += IsHalfWidth(text.charCodeAt(i))?1:2;
+        if (i == max - 1|| text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX  || (lineWidth==LINE_WIDTH_MAX-1&&!(IsHalfWidth(text.charCodeAt(i+1))))) {
+            let line = text.slice(j+1, i+1);
+            line = line.replace(/\r?\n/g, '');
+            lines.push(line);
+            j = i;
+            lineWidth = 0;
+        }
+    }
+    return lines;
+}
 
 function writeSampleTest() {
     const pg = new PdfGenerator();
@@ -520,31 +391,21 @@ function writeSampleTest() {
 
     //フォント
     const fontName = "F0";
-//    const fontDicPO = new  FontDictionaryPO(fontName, "Times-Roman", "Type1");
-//    const fontDicPO = new  FontDictionaryPO(fontName, "KozMinPro6N-Regular", "Type0","UniJIS-UTF16-H",new ArrayPO( generateDictionaryPO_jp_koz_font()));
-//    font.add(fontDicPO);
     font.add(new FontDictionaryPO(
         fontName,
         "#82l#82r#83S#83V#83b#83N",
         "Type0", "UniJIS-UTF16-H",
         new ArrayPO(fontDescriptor)
-    ));
-        //new FontDictionaryPO(fontName,baseFont,subtype,encoding,arrPO_fontDescriptor);
+    )); //new FontDictionaryPO(fontName,baseFont,subtype,encoding,arrPO_fontDescriptor);
     
     //描画
-    /*
-    const arr = new Array();
-    for (let i = 0; i < 52; i++)
-        arr.push("半角文字はだめなのかなＡaaAAああ");
-    */
     const arr = splitLines();
-    const strm = new TextStreamPO(arr,fontName,12,52.5,842-57,14);
-    //new TextStreamPO(arr_string, fontName, fontSize, startX, startY,textLeading)
+    const strm = new TextStreamPO();
+    strm.add(arr,fontName,12,52.5,842-57,14);
+    //new TextStreamPO().add(arr_line, fontName, fontSize, startX, startY, textLeading)
     textStream.add(strm);
-
 
     pg.testWriter();
 }
-
 
 writeSampleTest();
