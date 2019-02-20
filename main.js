@@ -17,15 +17,15 @@ render.on("line", (data) => {
     lns += ln;
 });
 */
-const LINE_WIDTH_MAX = 84;
+const LINE_WIDTH_MAX = 36;
 const fs = require("fs");
 
-function splitPage() {
+function splitLines() {
     const text = fs.readFileSync(process.argv[2], CHARACTOR_ENCODING);
     const lines = new Array();
     
     for (let i = 0, j = 0, lineWidth = 0, max = text.length; i < max; i++) {
-        lineWidth += (isHalfWidth(text.charCodeAt(i)) ? 1 : 2);
+        lineWidth += 1;
         if (i == max - 1|| text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX  || (lineWidth==LINE_WIDTH_MAX-1&&!(isHalfWidth(text.charCodeAt(i+1))))) {
             let line = text.slice(j+1, i+1);
             line = line.replace(/\r?\n/g, '');
@@ -34,7 +34,7 @@ function splitPage() {
             lineWidth = 0;
         }
     }
-    writePDF(lines.join("\n"));
+    return lines;
 //    console.log(lines.join("\n"));
 //    console.log(lines.length);
 //    console.log(lines);
@@ -161,7 +161,41 @@ startxref
 
 */
 
-
+const msGothicDicString = `<<
+/Type /Font
+/Subtype /CIDFontType2
+/BaseFont /#82l#82r#83S#83V#83b#83N
+/WinCharSet 128
+/FontDescriptor <<
+/Type /FontDescriptor
+/FontName /#82l#82r#83S#83V#83b#83N
+/Flags 39
+/FontBBox [ -150 -147 1100 853 ]
+/MissingWidth 507
+/StemV 92
+/StemH 92
+/ItalicAngle 0
+/CapHeight 853
+/XHeight 597
+/Ascent 853
+/Descent -147
+/Leading 0
+/MaxWidth 1000
+/AvgWidth 507
+/Style << /Panose <0805020B0609000000000000> >>
+>>
+/CIDSystemInfo
+<<
+ /Registry(Adobe)
+ /Ordering(Japan1)
+ /Supplement 2
+>>
+/DW 1000
+/W [
+ 231 389 500
+ 631 631 500
+]
+>>`;
 
 class PdfObject {
     constructor(value) {
@@ -184,18 +218,24 @@ class NullPO extends PdfObject {
 }
 class NumberPO extends PdfObject {
 
-
+}
+class HarfWidthStringPO extends PdfObject {
+    toString() {
+        return `(${this.content})`;
+    }
 }
 class StringPO extends PdfObject{
     toString() {
         let str = "<";
         for (let i = 0; i < this.content.length; i++) {
-            str += this.content.charCodeAt(i).toString(16);
+            str += ("0000"+ this.content.charCodeAt(i).toString(16)).slice(-4);
+            //("0000000000" + content.length.toString(10)).slice(-10)
         }
         str += ">";
         return str;
     }
 }
+
 class NamePO extends PdfObject{
     toString() {
         return `/${this.content}`;
@@ -269,6 +309,14 @@ class IndirectReference extends PdfObject{
         this.content.push(arg);
     }
 }
+class StringToString{
+    constructor(text){
+        this.text = text;
+    }
+    toString() {
+        return this.text;
+    }
+}
 class IndirectReference0 extends IndirectReference {
     constructor() {
         super();
@@ -292,8 +340,7 @@ class IndirectReferences {
         this.arr = new Array();
         this.arr.push(new IndirectReference0());
     }
-    add() {
-        const newIR = new IndirectReference(this.arr.length);
+    add(newIR = new IndirectReference(this.arr.length)) {
         this.arr.push(newIR);
         return newIR;
     }
@@ -351,7 +398,6 @@ class PdfGenerator {
         console.log(this.write(1));
     }
 }
-
 class TextStreamPO extends StringStreamPO {
     constructor(arr_string, fontName, fontSize, startX, startY,textLeading) {
     //arr_string ...  string の配列
@@ -378,7 +424,7 @@ class TextStreamPO extends StringStreamPO {
     }
 }
 class FontDictionaryPO extends DictionaryPO {
-    constructor(fontName,baseFont,subtype,encoding) {
+    constructor(fontName,baseFont,subtype,encoding,descendantFonts_arrPO) {
         super();
 
         const dict = new DictionaryPO();
@@ -386,7 +432,8 @@ class FontDictionaryPO extends DictionaryPO {
         if(fontName!=undefined) dict.add(new NamePO("Subtype"),new NamePO(subtype));
         if(baseFont!=undefined) dict.add(new NamePO("BaseFont"), new NamePO(baseFont));
         if(encoding!=undefined) dict.add(new NamePO("Encoding"),new NamePO(encoding));
-
+        if(descendantFonts_arrPO!=undefined) dict.add(new NamePO("DescendantFonts"),descendantFonts_arrPO);
+        
         const dict2 = new DictionaryPO();
         dict2.add(new NamePO(fontName),dict);
         this.add(new NamePO("Font"), dict2)
@@ -420,41 +467,84 @@ class DocumentCalalogDictionaryPO extends DictionaryPO {
         super.add(new NamePO("Type"), new NamePO("Catalog"));
     }
 }
+/*
+function generateDictionaryPO_jp_koz_font() {
+    const dicPO = new DictionaryPO();
+    const dicPO2 = new DictionaryPO();
+    const dicPO3 = new DictionaryPO();
+
+    dicPO3.add(new NamePO("Type"), new NamePO("FontDescriptor"));
+    dicPO3.add(new NamePO("FontName"),new NamePO("KozMinPr6N-Regular"));
+    dicPO3.add(new NamePO("Flags"), new NumberPO(4));
+    dicPO3.add(new NamePO("FontBox"), new ArrayPO(new NumberPO(-437),new NumberPO(-340),new NumberPO(1147),new NumberPO(1317)));
+    dicPO3.add(new NamePO("ItalicAngle"), new NumberPO(0));
+    dicPO3.add(new NamePO("Ascent"), new NumberPO(1317));
+    dicPO3.add(new NamePO("Descent"), new NumberPO(-349));
+    dicPO3.add(new NamePO("CapHeight"), new NumberPO(742));
+    dicPO3.add(new NamePO("StemV"), new NumberPO(80));
+
+    dicPO2.add(new NamePO("Registry"),new HarfWidthStringPO("Adobe"));
+    dicPO2.add(new NamePO("Ordering"),new HarfWidthStringPO("Japan1"));
+    dicPO2.add(new NamePO("Supplement"), new NumberPO(6));
+
+    dicPO.add(new NamePO("Type"), new NamePO("Font"));
+    dicPO.add(new NamePO("Subtype"), new NamePO("CIDFontType0"));
+    dicPO.add(new NamePO("/BaseFont"),new NamePO("KozMinPr6N-Regular"));
+    dicPO.add(new NamePO("CIDSystemInfo"),dicPO2);
+    dicPO.add(new NamePO("FontDescriptor"), dicPO3);
+
+    return dicPO;
+}*/
+
 function writeSampleTest() {
     const pg = new PdfGenerator();
-    const ir1 = pg.IRs.add();
-    const ir2 = pg.IRs.add();
-    const ir3 = pg.IRs.add();
-    const ir4 = pg.IRs.add();
-    const ir5 = pg.IRs.add();
+    const documentCatalog = pg.IRs.add();
+    const pageTree = pg.IRs.add();
+    const page = pg.IRs.add();
+    const font = pg.IRs.add();
+    const textStream = pg.IRs.add();
+    const fontDescriptor = pg.IRs.add();
+    fontDescriptor.add(new StringToString(msGothicDicString));
 
+    //ドキュメントカタログ
+    documentCatalog.add(new DocumentCalalogDictionaryPO(pageTree));
+        //new DocumentCalalogDictionaryPO(pageTreePO);
 
-    const docCatDicPO = new DocumentCalalogDictionaryPO(ir2);
-    //new DocumentCalalogDictionaryPO(pageTreePO);
-    ir1.add(docCatDicPO);
-
-    const pageTreeDicPO = new PageTreeDictionaryPO(new ArrayPO(ir3));
-    //new PageTreeDictionaryPO(arrPO_kids);
-    ir2.add(pageTreeDicPO);
-
-    const fontName = "F0";
-    const fontDicPO = new  FontDictionaryPO(fontName, "Times-Roman", "Type1");
-    //new FontDictionaryPO(fontName,baseFont,subtype,encoding);
-    ir4.add(fontDicPO);
-
-    const pageDicPO = new PageDictionaryPO(ir2, ir4, ir5);
-    //new PageDictionaryPO(parentPO,resourcesPO,contensPO);
-    ir3.add(pageDicPO);
+    //ページツリー
+    pageTree.add(new PageTreeDictionaryPO(new ArrayPO(page)));
+        //new PageTreeDictionaryPO(arrPO_kids);
     
+    //ページ
+    page.add(new PageDictionaryPO(pageTree, font, textStream));
+        //new PageDictionaryPO(parentPO,resourcesPO,contensPO);
 
+    //フォント
+    const fontName = "F0";
+//    const fontDicPO = new  FontDictionaryPO(fontName, "Times-Roman", "Type1");
+//    const fontDicPO = new  FontDictionaryPO(fontName, "KozMinPro6N-Regular", "Type0","UniJIS-UTF16-H",new ArrayPO( generateDictionaryPO_jp_koz_font()));
+//    font.add(fontDicPO);
+    font.add(new FontDictionaryPO(
+        fontName,
+        "#82l#82r#83S#83V#83b#83N",
+        "Type0", "UniJIS-UTF16-H",
+        new ArrayPO(fontDescriptor)
+    ));
+        //new FontDictionaryPO(fontName,baseFont,subtype,encoding,arrPO_fontDescriptor);
+    
+    //描画
+    /*
     const arr = new Array();
     for (let i = 0; i < 52; i++)
-        arr.push("abcdefghijklmnopqrstuvwxyz    abcdefghijklmnopqrstuvwxyz    abcdefghij");
-    
+        arr.push("半角文字はだめなのかなＡaaAAああ");
+    */
+    const arr = splitLines();
     const strm = new TextStreamPO(arr,fontName,12,52.5,842-57,14);
     //new TextStreamPO(arr_string, fontName, fontSize, startX, startY,textLeading)
-    ir5.add(strm);
+    textStream.add(strm);
+
 
     pg.testWriter();
 }
+
+
 writeSampleTest();
