@@ -360,7 +360,11 @@ class PdfGenerator { //textを入力としてPDFを出力する
         ));
     }
     makePages(text){
-        const lines = splitLines(text);
+        const linesLong = splitLines(text);
+        const lines = new Array();
+        linesLong.forEach((lineLong) => {
+            lines.push(...(splitLongLine(lineLong, LINE_WIDTH_MAX)));
+        });
         const pages = splitPages(lines);
     
         pages.forEach((lines) => {
@@ -369,26 +373,30 @@ class PdfGenerator { //textを入力としてPDFを出力する
 
         this.structPageTree();
 
-        function splitLines(text) {
+        function splitLines(text) {//行ごとに分割
             text = text.replace(/\r/g, '');
-            //行ごとに分割
-            //各行がLINE_WIDTH_MAXを超える場合は改行して分割
+            const lines = text.split("\n");
+            return lines; 
+        }
+        function splitLongLine(lineIn,lineWidthMax) {//入力行がlineWidthを超える場合は分割
             const lines = new Array();
-            
-            for (let i = 0, j = -1, lineWidth = 0, max = text.length; i < max; i++) {
-                lineWidth += IsHalfWidth(text.charCodeAt(i)) ? 1 : 2;
-                if (i == max - 1 || text[i] == "\n" || lineWidth >= LINE_WIDTH_MAX || (lineWidth == LINE_WIDTH_MAX - 1 && !(IsHalfWidth(text.charCodeAt(i + 1))))) {
-                    let line = text.slice(j + 1, i + 1);
-                    line = line.replace(/\r?\n/g, '');
+            let line = "";
+            for (let i = 0, lineWidth = 0, max = lineIn.length; i < max; i++) {
+                lineWidth += IsHalfWidth(lineIn.charCodeAt(i)) ? 1 : 2;
+                line +=lineIn[i];
+                if (lineWidth == lineWidthMax ||
+                    (lineWidth == lineWidthMax - 1 && !(IsHalfWidth(lineIn.charCodeAt(i + 1))))) {
                     lines.push(line);
-                    j = i;
-                    lineWidth = 0;
+                    line = "";
+                    lineWidth=0;
                 }
+
             }
+            lines.push(line);
             return lines;
         }
-        function splitPages(lines) {
-            //ページごとにlinesを分割して配列として返却
+        
+        function splitPages(lines) { //ページごとにlinesを分割して配列として返却
             const pages = new Array();
             let page = new Array();
             const LINE_HEIGHT_MAX = 52;
@@ -403,7 +411,6 @@ class PdfGenerator { //textを入力としてPDFを出力する
             
             return pages;
         }
-
     }
     definePage(lines) {
         const textStream = this.IRs.add();
