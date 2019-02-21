@@ -18,12 +18,16 @@ text2PDF.jsをダウンロードし同ディレクトリ上で Usage を参考�
 テキストファイルのほかに、簡易的なマークダウン形式もサポートしています。
 
 入力に*.mdファイルを与えるか、-mオプションを指定すると、簡易マークダウンモードで実行します。
+
     $ node text2PDF.js hoge.md -o hoge.PDF
     $ node text2PDF.js hoge.txt -m -o hoge.PDF
+
 -tオプションで強制的にテキストモードで実行します。*.mdファイルをテキストモードで実行したいときに使用してください。
+
     $ node text2PDF.js hoge.md -t -o hoge.PDF
 
 簡易マークダウンモードでは、次の形式をサポートしています
+
     # h1
     ## h2
     ### h3
