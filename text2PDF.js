@@ -588,7 +588,7 @@ function defineTags() {//MarkDownTagのインスタンスの集合を返す
     const h5 = new MarkDownTag("h5", /^##### /, 0.75, [6, 0], [0, 1]);
     const h6 = new MarkDownTag("h6", /^###### /, 0.625, [7, 0], [0, 1]);
     const li = new MarkDownTag("li", /^- /, 1.0, [0, 0], [1, 1]);
-    const pre = new MarkDownTag("pre", /^    /, 1.0, [2, 0], [1, 1]);
+    const pre = new MarkDownTag("pre", /^    /, 1.0, [4, 0], [4, 1]);
     const p = new MarkDownTag("p", undefined, 1.0, undefined, [0, 1]);
 
     return new Array(h1, h2, h3, h4, h5, h6, li,pre, p);
