@@ -520,15 +520,18 @@ function main(commandLineArg) {
         return arg == '-h' || arg == '-H' || arg == '--Help' || arg == '--help';
     });
     if (hyphenH != -1) {
-        console.log("text2PDF is convert from text file to PDF file.");
-        console.log("ex)..\n $node text2PDF.js input.hoge -o output.PDF\n");
-        console.log("first argument : inputFileName");
-        console.log(" (if it is *.md, run simple markdown mode.)");
-        console.log("option:");
-        console.log(" -o outputFileName ... define output file name,");
-        console.log(" -t ... run text mode forcibily,");
-        console.log(" -m ... run simple markdown mode forcibily,");
-        console.log(" -h ... print help");
+        console.log(
+`text2PDF is convert from text file to PDF file.
+ex)..
+$ node text2PDF.js input.hoge -o output.PDF
+
+first argument : inputFileName
+ (if it is *.md, run simple markdown mode.)
+option:
+ -o outputFileName ... define output file name,
+ -t ... run text mode forcibily,
+ -m ... run simple markdown mode forcibily,
+ -h ... print help`);
         return;
     }
 
@@ -569,7 +572,7 @@ function main(commandLineArg) {
     if (markDownMode == undefined) //オプション指定されていないとき
         markDownMode = /\.md$/.test(inputFileName);//拡張子が.mdならマークダウンモード
 
-    console.log(`convert:  '${inputFileName}'(${markDownMode?"markdown":"text"}) => '${outputFileName}'(PDF)`);
+    console.log(`convert:  '${inputFileName}'(${markDownMode?"markdown":"text"}) -> '${outputFileName}'(PDF)`);
     
     const CHARACTOR_ENCODING = "utf8";
     const textRead = fs.readFileSync(inputFileName, CHARACTOR_ENCODING);
