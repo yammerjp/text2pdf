@@ -8,6 +8,9 @@ class PdfObject {//PDFファイルの構造としてのオブジェクト
         return this.content;
     }
 }
+class StringToStringPO extends PdfObject  {////PDFファイルの構造としての任意のオブジェクト ファイルに表記されているまま定義することができる。
+
+}
 class BooleanPO extends PdfObject{//PDFファイルの構造としての真偽値オブジェクト
     constructor(value) {
         super(value);
@@ -96,7 +99,7 @@ class DictionaryPO extends PdfObject{//PDFファイルの構造としての辞�
         return str;
     }
 }
-class IndirectReference extends PdfObject{//PDFファイルの構造としての間接オブジェクト 間接オブジェクト番号と、任意の数の任意オブジェクトを持つ
+class IndirectReferencePO extends PdfObject{//PDFファイルの構造としての間接オブジェクト 間接オブジェクト番号と、任意の数の任意オブジェクトを持つ
     constructor(number) {
         super();
         this.number = number;
@@ -120,15 +123,7 @@ class IndirectReference extends PdfObject{//PDFファイルの構造としての
         this.content.push(arg);
     }
 }
-class StringToString{////PDFファイルの構造としての任意のオブジェクト ファイルに表記されているまま定義することができる。
-    constructor(text){
-        this.text = text;
-    }
-    toString() {
-        return this.text;
-    }
-}
-class IndirectReference0 extends IndirectReference {//PDFファイルの構造としての0番目のオブジェクト 特別な存在
+class IndirectReferencePO0 extends IndirectReferencePO {//PDFファイルの構造としての0番目のオブジェクト 特別な存在
     constructor() {
         super();
         this.number = 0;
@@ -149,9 +144,9 @@ class IndirectReference0 extends IndirectReference {//PDFファイルの構造�
 class IndirectReferences { //出力PDFのすべての間接オブジェクトを配列としてもつ
     constructor() {
         this.arr = new Array();
-        this.arr.push(new IndirectReference0());
+        this.arr.push(new IndirectReferencePO0());
     }
-    add(newIR = new IndirectReference(this.arr.length)) {
+    add(newIR = new IndirectReferencePO(this.arr.length)) {
         this.arr.push(newIR);
         return newIR;
     }
@@ -162,9 +157,9 @@ class IndirectReferences { //出力PDFのすべての間接オブジェクトを
             return undefined;
     }
 }
-class StringStreamPO { //PDFファイルの構造としてのストリームオブジェクト
+class StreamPO extends PdfObject { //PDFファイルの構造としてのストリームオブジェクト
     constructor() {
-        this.content = "";
+        super("");
         this.lenDic = new DictionaryPO();
         this.lenDic.add(new NamePO("Length"),new NumberPO(0));
     }
@@ -176,7 +171,7 @@ class StringStreamPO { //PDFファイルの構造としてのストリームオ�
         return `${this.lenDic.toString()}stream\n${this.content}\nendstream\n`;
     }
 }
-class TextStreamPO extends StringStreamPO { //文字列描画のみが可能なストリームオブジェクト
+class TextStreamPO extends StreamPO { //文字列描画のみが可能なストリームオブジェクト
     constructor() {
         //arr_string ...  string の配列
         super();
@@ -339,7 +334,7 @@ class PdfGenerator { //textを入力としてPDFを出力する
                 dic2.add(new NamePO("AvgWidth"), new NumberPO(507));
                 dic2.add(new NamePO("Style"), dic2_2);
             
-                dic2_2.add(new NamePO("Panose"), new StringToString("<0805020B0609000000000000>"));
+                dic2_2.add(new NamePO("Panose"), new StringToStringPO("<0805020B0609000000000000>"));
             
                 dic3.add(new NamePO("Registry"), new HarfWidthStringPO("Adobe"));
                 dic3.add(new NamePO("Ordering"), new HarfWidthStringPO("Japan1"));
