@@ -568,6 +568,8 @@ function main(commandLineArg) {
     if (markDownMode == undefined) //オプション指定されていないとき
         markDownMode = /\.md$/.test(inputFileName);//拡張子が.mdならマークダウンモード
 
+    console.log(`convert:  '${inputFileName}'(${markDownMode?"markdown":"text"}) => '${outputFileName}'(PDF)`);
+    
     const CHARACTOR_ENCODING = "utf8";
     const textRead = fs.readFileSync(inputFileName, CHARACTOR_ENCODING);
     const tags = defineTags();
