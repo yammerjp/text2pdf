@@ -1,19 +1,4 @@
-const CHARACTOR_ENCODING = "utf8";
 const fs = require("fs");
-//const argv = require("argv");
-
-function IsHalfWidth(chrCode) {//文字コードを引数に、半角文字であればtrueを返す
-    if ((chrCode >= 0x00 && chrCode < 0x81) ||
-        (chrCode === 0xf8f0) ||
-        (chrCode >= 0xff61 && chrCode < 0xffa0) ||
-        (chrCode >= 0xf8f1 && chrCode < 0xf8f4)) {
-        //半角文字
-        return true;
-    } else {
-        //それ以外
-        return false;
-    }
-};
 
 class PdfObject {//PDFファイルの構造としてのオブジェクト
     constructor(content) {
@@ -530,71 +515,110 @@ class MarkDownTag {
         return text.slice(this.outSide[0],text.length-this.outSide[1]);
     }
 }
-const h1 = new MarkDownTag("h1", /^# /, 2.0, [2, 0], [0, 1]);
-const h2 = new MarkDownTag("h2", /^## /, 1.5, [3, 0], [0, 1]);
-const h3 = new MarkDownTag("h3", /^### /, 1.125, [4, 0], [0, 1]);
-const h4 = new MarkDownTag("h4", /^#### /, 1.0, [5, 0], [0, 1]);
-const h5 = new MarkDownTag("h5", /^##### /, 0.75, [6, 0], [0, 1]);
-const h6 = new MarkDownTag("h6", /^###### /, 0.625, [7, 0], [0, 1]);
-const li = new MarkDownTag("li", /^- /, 1.0, [0, 0], [1, 1], [0, 1]);
-const p = new MarkDownTag("p", undefined, 1.0,undefined, [0, 1]);
 
-const tags = new Array(h1,h2,h3,h4,h5,h6,li,p);//MarkDownTagのインスタンスの集合
+function main(commandLineArg) {
+    let inputFileName;
+    let outputFileName = nameOutputFile();
+    let markDownMode;
 
-let inputFileName;
-let outputFileName;
-//= "output.pdf";
-let markDownMode;
-
-function isExistFile(file) {
-    try {
-      fs.statSync(file);
-      return true
-    } catch(err) {
-      if(err.code === 'ENOENT') return false
+    const hyphenH = commandLineArg.findIndex((arg) => {//ヘルプ参照
+        return arg == '-h' || arg == '-H' || arg == '--Help' || arg == '--help';
+    });
+    if (hyphenH != -1) {
+        console.log("text2PDF is convert from text file to PDF file.");
+        console.log("ex) $./text2PDF.exe input.hoge -o output.PDF");
+        console.log("first argument : inputFileName");
+        console.log(" (if it is *.md, run simple markdown mode.)");
+        console.log("option:\n -o outputFileName ... define output file name,");
+        console.log(" -t ... run text mode forcibily,");
+        console.log(" -m ... run simple markdown mode forcibily");
+        console.log(" -h ... print help");
+        return;
     }
-  }
-  
-for (let i = 0; ; i++) {//出力先未指定時のファイル名
-    const fileName = `output${i}.pdf`;
-    if (!isExistFile(fileName)) {
-        outputFileName = fileName;
-        break;
+
+    const hyphenM = commandLineArg.findIndex((arg) => {//強制マークダウンモード
+        return arg == '-m' || arg == '-M' || arg == '--Markdown' || arg == '--markdown' || arg == '--MarkDown'; 
+    });
+    if (hyphenM != -1) {
+        markDownMode = true;
+        commandLineArg.splice(hyphenM, 1);
     }
-}
-  
 
-const commandLineArg = process.argv.slice(2, );
-console.log(commandLineArg);
+    const hyphenT = commandLineArg.findIndex((arg) => {//強制テキストモード
+        return arg == '-t' || arg == '-T' || arg == '--text' || arg == '--Text';
+    });
+    if (hyphenT != -1) {
+        markDownMode = false;
+        commandLineArg.splice(hyphenT, 1);
+    }
 
-const hyphenT = commandLineArg.findIndex((arg) => { return arg == '-t' || arg == '-T' });//テキストモード
-if (hyphenT != -1) {
-    markDownMode = false;
-    commandLineArg.splice(hyphenT, 1);
-}
+    const hyphenO = commandLineArg.findIndex((arg) => {
+        return arg == '-o' || arg == '-O' || arg == '--Output' || arg == '-output';
+    });//出力先指定
+    if (hyphenO < commandLineArg.length - 1) {
+        outputFileName = commandLineArg[hyphenO + 1];
+        commandLineArg.splice(hyphenO, 2);
+    }
 
-const hyphenM = commandLineArg.findIndex((arg) => { return arg == '-m' || arg == '-M' });//マークダウンモード
-if (hyphenM != -1) {
-    markDownMode = true;
-    commandLineArg.splice(hyphenM, 1);
-}
-
-const hyphenO = commandLineArg.findIndex((arg) => { return arg == '-o' || arg == '-O' });//出力先
-
-if (hyphenO < commandLineArg.length-1) {
-    outputFileName = commandLineArg[hyphenO + 1];
-    commandLineArg.splice(hyphenO,2);
-}
-if (commandLineArg.length > 0) {//入力ファイルが指定されているとき
+    if (commandLineArg.length == 0) { //入力ファイルが指定されていないとき
+        console.log("Error,input file is not defined.\n");
+        return;
+    }
     inputFileName = commandLineArg[0];
+    if (!IsExistFile(inputFileName)) {
+        console.log("Error,input file is not exist.\n");
+        return;
+    }
+
     if (markDownMode == undefined) //オプション指定されていないとき
         markDownMode = /\.md$/.test(inputFileName);//拡張子が.mdならマークダウンモード
-    
-    const pdfGenerator = new PdfGenerator(fs.readFileSync(inputFileName, CHARACTOR_ENCODING), markDownMode ? tags : undefined); 
-    //const pdfGenerator = new PdfGenerator(fs.readFileSync(inputFileName, CHARACTOR_ENCODING),tags); //マークダウンモード
-    //const pdfGenerator = new PdfGenerator(fs.readFileSync(inputFileName, CHARACTOR_ENCODING)); //テキストモード
+
+    const CHARACTOR_ENCODING = "utf8";
+    const textRead = fs.readFileSync(inputFileName, CHARACTOR_ENCODING);
+    const tags = defineTags();
+    const pdfGenerator = new PdfGenerator(textRead, (markDownMode ? tags : undefined));
     const writer = fs.createWriteStream(outputFileName);
     writer.write(pdfGenerator.generate());
 }
+function defineTags() {//MarkDownTagのインスタンスの集合を返す
+    const h1 = new MarkDownTag("h1", /^# /, 2.0, [2, 0], [0, 1.5]);
+    const h2 = new MarkDownTag("h2", /^## /, 1.5, [3, 0], [0, 1.5]);
+    const h3 = new MarkDownTag("h3", /^### /, 1.125, [4, 0], [0, 1]);
+    const h4 = new MarkDownTag("h4", /^#### /, 1.0, [5, 0], [0, 1]);
+    const h5 = new MarkDownTag("h5", /^##### /, 0.75, [6, 0], [0, 1]);
+    const h6 = new MarkDownTag("h6", /^###### /, 0.625, [7, 0], [0, 1]);
+    const li = new MarkDownTag("li", /^- /, 1.0, [0, 0], [1, 1], [0, 1]);
+    const p = new MarkDownTag("p", undefined, 1.0, undefined, [0, 1]);
 
+    return new Array(h1, h2, h3, h4, h5, h6, li, p);
+}
+function IsHalfWidth(chrCode) {//文字コードを引数に、半角文字であればtrueを返す
+    if ((chrCode >= 0x00 && chrCode < 0x81) ||
+        (chrCode === 0xf8f0) ||
+        (chrCode >= 0xff61 && chrCode < 0xffa0) ||
+        (chrCode >= 0xf8f1 && chrCode < 0xf8f4)) {
+        //半角文字
+        return true;
+    } else {
+        //それ以外
+        return false;
+    }
+};
+function IsExistFile(file) {
+    try {
+        fs.statSync(file);
+        return true;
+    } catch (err) {
+        if (err.code === 'ENOENT') return false;
+    }
+}
+function nameOutputFile() {//出力先未指定時のファイル名
+    for (let i = 0; ; i++) {
+        const fileName = `text2pdf_output${i}.pdf`;
+        if (!IsExistFile(fileName)) {
+            return fileName;
+        }
+    }
+}
 
+main(process.argv.slice(2));
