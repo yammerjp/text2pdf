@@ -521,12 +521,13 @@ function main(commandLineArg) {
     });
     if (hyphenH != -1) {
         console.log("text2PDF is convert from text file to PDF file.");
-        console.log("ex) $./text2PDF.exe input.hoge -o output.PDF");
+        console.log("ex)..\n $node text2PDF.js input.hoge -o output.PDF\n");
         console.log("first argument : inputFileName");
         console.log(" (if it is *.md, run simple markdown mode.)");
-        console.log("option:\n -o outputFileName ... define output file name,");
+        console.log("option:");
+        console.log(" -o outputFileName ... define output file name,");
         console.log(" -t ... run text mode forcibily,");
-        console.log(" -m ... run simple markdown mode forcibily");
+        console.log(" -m ... run simple markdown mode forcibily,");
         console.log(" -h ... print help");
         return;
     }
