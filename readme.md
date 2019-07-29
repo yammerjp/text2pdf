@@ -1,18 +1,26 @@
 # text2PDF
+
 text2PDFは、テキストファイルからPDFファイルを生成するコマンドラインツールです。
 node.js(v11.2.0)によって書かれています
+
 ## Demo
-    $ node text2PDF.js README_ja.md -o README_ja.pdf
+
+    $ node text2PDF.js readme.md -o readme.pdf
 README_ja.pdfは、README_ja.mdを当ツールでPDF化したものです。
+
 ## Requirements
+
 入力ファイルの文字コードはUTF-8を想定しています。
 出力ファイルでは、日本語以外の言語は想定していません。MSゴシックに無いフォントでは文字化けの可能性があります。
+
 ## Setup
+
 Node.jsが必要です。インストールしてください。標準モジュール以外に必要なモジュールはありません。
 
 text2PDF.jsをダウンロードし同ディレクトリ上で Usage を参考に引数にテキストファイルを与えるとPDFファイルを生成します。
 
 ## Usage
+
 コンソール画面で、第一引数に生成元のテキストファイルを、-oオプションに生成先PDFファイルを指定してください。
 
     $ node text2PDF.js hoge.txt -o hoge.PDF
