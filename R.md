@@ -5,8 +5,8 @@ node.js(v11.2.0)によって書かれています
 
 ## Demo
 
-    $ node text2PDF.js readme.md -o readme.pdf
-README_ja.pdfは、README_ja.mdを当ツールでPDF化したものです。
+    $ node text2PDF.js README.md -o README.pdf
+README.pdfは、README.mdを当ツールでPDF化したものです。
 
 ## Requirements
 
